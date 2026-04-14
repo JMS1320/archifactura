@@ -166,7 +166,8 @@ export default function App() {
   const [photo, setPhoto] = useState(null);
   const [mime, setMime] = useState("image/jpeg");
   const [dest, setDest] = useState(null);
-  const [isToday, setIsToday] = useState(true);
+  const [isToday, setIsToday] = useState(false);
+  const [dateChosen, setDateChosen] = useState(false);
   const [customDate, setCustomDate] = useState(fmtInput(new Date()));
   const [prov, setProv] = useState("");
   const [showSug, setShowSug] = useState(false);
@@ -182,7 +183,7 @@ export default function App() {
   const effDate = isToday ? now : new Date(customDate + "T12:00:00");
   const ext = mime === "application/pdf" ? "pdf" : "jpg";
   const fileName = `${fmtShort(effDate)} - ${prov || "proveedor"}.${ext}`;
-  const canGo = photo && prov.trim() && dest;
+  const canGo = photo && prov.trim() && dest && dateChosen;
 
   const provList = getProviders().filter(
     (p) => p.toLowerCase().includes(prov.toLowerCase()) && prov.length > 0
@@ -293,7 +294,8 @@ export default function App() {
     setStep("foto");
     setPhoto(null);
     setDest(null);
-    setIsToday(true);
+    setIsToday(false);
+    setDateChosen(false);
     setCustomDate(fmtInput(new Date()));
     setProv("");
     setStatus(null);
@@ -740,7 +742,7 @@ export default function App() {
               <span style={labelStyle}>Fecha de factura</span>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <button
-                  onClick={() => setIsToday(!isToday)}
+                  onClick={() => { setIsToday(!isToday); setDateChosen(true); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -775,22 +777,29 @@ export default function App() {
                   </div>
                   Hoy
                 </button>
-                <span
-                  style={{
-                    fontSize: 15,
-                    color: C.mut,
-                    fontWeight: 600,
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}
-                >
-                  {fmtShort(effDate)}
-                </span>
+                {dateChosen && (
+                  <span
+                    style={{
+                      fontSize: 15,
+                      color: C.mut,
+                      fontWeight: 600,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {fmtShort(effDate)}
+                  </span>
+                )}
+                {!dateChosen && (
+                  <span style={{ fontSize: 13, color: C.err, fontWeight: 500 }}>
+                    ← Elegí una fecha
+                  </span>
+                )}
               </div>
               {!isToday && (
                 <input
                   type="date"
                   value={customDate}
-                  onChange={(e) => setCustomDate(e.target.value)}
+                  onChange={(e) => { setCustomDate(e.target.value); setDateChosen(true); }}
                   style={{ ...inputStyle, marginTop: 10 }}
                 />
               )}
