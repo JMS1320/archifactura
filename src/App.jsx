@@ -6,13 +6,11 @@ import { useState, useRef, useEffect, useCallback } from "react";
 const CLIENT_ID = "320449047529-doh59lh7q8jo393scvlhv7baf9jp6p2g.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
-// Ruta base en Drive: SAN MANUEL > IMPUESTOS > IVA > IVA - Facturas subdiarios > Subdiarios - Documentacion (Ulises) > - Archivo Automatico Facturas
-const BASE_FOLDER = "SAN MANUEL/IMPUESTOS/IVA/IVA - Facturas subdiarios/Subdiarios - Documentacion (Ulises)/- Archivo Automatico Facturas";
-
+// IDs directos de las carpetas en Google Drive (no se crean carpetas nuevas)
 const DESTINATARIOS = {
-  MSA: { label: "MSA", color: "#f59e0b", folder: `${BASE_FOLDER}/MSA` },
-  PAM: { label: "PAM", color: "#3b82f6", folder: `${BASE_FOLDER}/PAM` },
-  MA:  { label: "MA",  color: "#10b981", folder: `${BASE_FOLDER}/MA` },
+  MSA: { label: "MSA", color: "#f59e0b", folderId: "1ktJIwI6TRU521f9Uktf04rC0F89FBsOv" },
+  PAM: { label: "PAM", color: "#3b82f6", folderId: "19pugZcibLjDqbSZG-vmgecx4aN3t6i4_" },
+  MA:  { label: "MA",  color: "#10b981", folderId: "18IrmWvQbRkpiHyCPFDngLcud_xpBFMax" },
 };
 
 // ============================================================
@@ -211,8 +209,7 @@ export default function App() {
     const remain = [];
     for (const it of q) {
       try {
-        const fid = await ensureFolderPath(token, it.folder);
-        await uploadFile(token, fid, it.fileName, it.photo, it.mime);
+        await uploadFile(token, it.folderId, it.fileName, it.photo, it.mime);
         const nh = [
           { name: it.fileName, dest: it.dest, date: new Date().toISOString(), ok: true },
           ...history,
@@ -250,10 +247,10 @@ export default function App() {
     setStep("subiendo");
     setStatus("uploading");
     addProvider(prov);
-    const folder = DESTINATARIOS[dest].folder;
+    const folderId = DESTINATARIOS[dest].folderId;
 
     if (!online || !token) {
-      const it = { fileName, photo, mime, folder, dest, date: new Date().toISOString() };
+      const it = { fileName, photo, mime, folderId, dest, date: new Date().toISOString() };
       const nq = [...queue, it];
       setQueue(nq);
       saveQueue(nq);
@@ -263,8 +260,7 @@ export default function App() {
     }
 
     try {
-      const fid = await ensureFolderPath(token, folder);
-      const res = await uploadFile(token, fid, fileName, photo, mime);
+      const res = await uploadFile(token, folderId, fileName, photo, mime);
       if (res.id) {
         setDriveLink(res.webViewLink || "");
         setStatus("success");
@@ -282,7 +278,7 @@ export default function App() {
       setErrMsg(err.message);
       setStatus("error");
       // Save to offline queue as fallback
-      const it = { fileName, photo, mime, folder, dest, date: new Date().toISOString() };
+      const it = { fileName, photo, mime, folderId, dest, date: new Date().toISOString() };
       const nq = [...queue, it];
       setQueue(nq);
       saveQueue(nq);
