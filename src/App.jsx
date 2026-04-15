@@ -176,6 +176,7 @@ export default function App() {
   const [queue, setQueue] = useState(getQueue());
   const [online, setOnline] = useState(navigator.onLine);
   const fileRef = useRef(null);
+  const filePickRef = useRef(null);
 
   const now = new Date();
   const effDate = isToday ? now : new Date(customDate + "T12:00:00");
@@ -197,6 +198,37 @@ export default function App() {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
+  }, []);
+
+  // Handle Share Target: when opened from WhatsApp "Compartir"
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('shared') === '1') {
+      // Clean URL
+      window.history.replaceState({}, '', '/');
+      // Read shared file from service worker cache
+      (async () => {
+        try {
+          const cache = await caches.open('share-target');
+          const response = await cache.match('/shared-file');
+          if (response) {
+            const blob = await response.blob();
+            const mimeType = response.headers.get('Content-Type') || 'application/pdf';
+            setMime(mimeType);
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              setPhoto(ev.target.result);
+              setStep("datos");
+            };
+            reader.readAsDataURL(blob);
+            // Clean up
+            await cache.delete('/shared-file');
+          }
+        } catch (err) {
+          console.error('Error reading shared file:', err);
+        }
+      })();
+    }
   }, []);
 
   // Auto-sync queue when back online
@@ -520,47 +552,94 @@ export default function App() {
         {step === "foto" && (
           <div style={{ animation: "fu .3s ease" }}>
             <p style={{ fontSize: 14, color: C.mut, margin: "0 0 18px" }}>
-              Sacale una foto a la factura o elegí un archivo
+              ¿Cómo querés cargar la factura?
             </p>
+
+            {/* Input oculto para CÁMARA */}
             <input
               ref={fileRef}
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*"
               capture="environment"
               onChange={handlePhoto}
               style={{ display: "none" }}
             />
+            {/* Input oculto para ELEGIR ARCHIVO (sin capture, permite PDFs) */}
+            <input
+              ref={filePickRef}
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={handlePhoto}
+              style={{ display: "none" }}
+            />
+
+            {/* Botón TOMAR FOTO */}
             <button
               onClick={() => fileRef.current?.click()}
               style={{
                 width: "100%",
-                padding: "48px 20px",
+                padding: "32px 20px",
                 background: "rgba(56,189,248,0.03)",
-                border: "2px dashed rgba(56,189,248,0.18)",
+                border: "2px solid rgba(56,189,248,0.15)",
                 borderRadius: 16,
                 cursor: "pointer",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                gap: 12,
+                gap: 16,
                 color: C.acc,
+                marginBottom: 12,
               }}
             >
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-              <span style={{ fontSize: 16, fontWeight: 700 }}>Tomar foto / Elegir archivo</span>
-              <span style={{ fontSize: 12, color: C.mut }}>JPG, PNG o PDF</span>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14,
+                background: "rgba(56,189,248,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </div>
+              <div style={{ textAlign: "left" }}>
+                <span style={{ fontSize: 16, fontWeight: 700, display: "block" }}>Tomar foto</span>
+                <span style={{ fontSize: 12, color: C.mut }}>Sacale una foto a la factura</span>
+              </div>
+            </button>
+
+            {/* Botón ELEGIR ARCHIVO */}
+            <button
+              onClick={() => filePickRef.current?.click()}
+              style={{
+                width: "100%",
+                padding: "32px 20px",
+                background: "rgba(52,211,153,0.03)",
+                border: "2px solid rgba(52,211,153,0.15)",
+                borderRadius: 16,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                color: C.ok,
+              }}
+            >
+              <div style={{
+                width: 52, height: 52, borderRadius: 14,
+                background: "rgba(52,211,153,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="12" y1="18" x2="12" y2="12" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+              </div>
+              <div style={{ textAlign: "left" }}>
+                <span style={{ fontSize: 16, fontWeight: 700, display: "block" }}>Elegir archivo</span>
+                <span style={{ fontSize: 12, color: C.mut }}>PDF o imagen del celular</span>
+              </div>
             </button>
 
             {/* HISTORIAL */}
